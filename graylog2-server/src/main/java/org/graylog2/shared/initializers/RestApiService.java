@@ -41,7 +41,7 @@ public class RestApiService extends AbstractJerseyService {
     public static final String PLUGIN_PREFIX = "/plugins";
 
     private final BaseConfiguration configuration;
-    private final Map<String, Set<PluginRestResource>> pluginRestResources;
+    private final Map<String, Set<Class<? extends PluginRestResource>>> pluginRestResources;
     private final String[] restControllerPackages;
 
     @Inject
@@ -51,7 +51,7 @@ public class RestApiService extends AbstractJerseyService {
                            final Set<Class<? extends ContainerResponseFilter>> containerResponseFilters,
                            final Set<Class<? extends ExceptionMapper>> exceptionMappers,
                            @Named("additionalJerseyComponents") final Set<Class> additionalComponents,
-                           final Map<String, Set<PluginRestResource>> pluginRestResources,
+                           final Map<String, Set<Class<? extends PluginRestResource>>> pluginRestResources,
                            @Named("RestControllerPackages") final String[] restControllerPackages,
                            final ObjectMapper objectMapper) {
         super(dynamicFeatures, containerResponseFilters, exceptionMappers, additionalComponents, objectMapper, metricRegistry);
@@ -81,17 +81,17 @@ public class RestApiService extends AbstractJerseyService {
         LOG.info("Started REST API at <{}>", configuration.getRestListenUri());
     }
 
-    private Set<Resource> prefixPluginResources(String pluginPrefix, Map<String, Set<PluginRestResource>> pluginResourceMap) {
+    private Set<Resource> prefixPluginResources(String pluginPrefix, Map<String, Set<Class<? extends PluginRestResource>>> pluginResourceMap) {
         final Set<Resource> result = new HashSet<>();
-        for (Map.Entry<String, Set<PluginRestResource>> entry : pluginResourceMap.entrySet()) {
-            for (PluginRestResource pluginRestResource : entry.getValue()) {
+        for (Map.Entry<String, Set<Class<? extends PluginRestResource>>> entry : pluginResourceMap.entrySet()) {
+            for (Class<? extends PluginRestResource> pluginRestResourceClass : entry.getValue()) {
                 StringBuilder resourcePath = new StringBuilder(pluginPrefix).append("/").append(entry.getKey());
-                final Path pathAnnotation = Resource.getPath(pluginRestResource.getClass());
+                final Path pathAnnotation = Resource.getPath(pluginRestResourceClass);
                 final String path = (pathAnnotation.value() == null ? "" : pathAnnotation.value());
                 if (!path.startsWith("/"))
                     resourcePath.append("/");
 
-                final Resource.Builder resourceBuilder = Resource.builder(pluginRestResource.getClass()).path(resourcePath.append(path).toString());
+                final Resource.Builder resourceBuilder = Resource.builder(pluginRestResourceClass).path(resourcePath.append(path).toString());
                 final Resource resource = resourceBuilder.build();
                 result.add(resource);
             }
